@@ -12,7 +12,7 @@ static inline uint16_t vga_entry(unsigned char uc, uint8_t color) {
 	return (uint16_t) uc | (uint16_t) color << 8;
 }
  
-size_t strlen(const char* str) {
+size_t vga_strlen(const char* str) {
 	size_t len = 0;
 	while (str[len])
 		len++;
@@ -61,5 +61,5 @@ void vga_write(const char* data, size_t size) {
 }
  
 void vga_writestring(const char* data) {
-	vga_write(data, strlen(data));
+	vga_write(data, vga_strlen(data));
 }

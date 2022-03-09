@@ -5,6 +5,12 @@
 #include "memutils.h"
 
 #include "pmm.h"
+#include "serialio.h"
+
+void println(char* str) {
+    write_serial_string("[PAGING] ");
+    writeln_serial_string(str);
+}
 
 // Defined in kheap.c
 extern void * heap_start, * heap_end, * heap_max, * heap_curr;
@@ -57,6 +63,7 @@ void * dumb_kmalloc(uint32_t size, int align) {
  * Allocate a set of pages specified by the region
  * */
 void allocate_region(page_directory_t * dir, uint32_t start_va, uint32_t end_va, int iden_map, int is_kernel, int is_writable) {
+    println("[ALR] Allocating region...");
     uint32_t start = start_va & 0xfffff000;
     uint32_t end = end_va & 0xfffff000;
     while(start <= end) {
@@ -66,6 +73,7 @@ void allocate_region(page_directory_t * dir, uint32_t start_va, uint32_t end_va,
             allocate_page(dir, start, 0, is_kernel, is_writable);
         start = start + PAGE_SIZE;
     }
+    println("[ALR] Region allocated!");
 }
 
 /*
@@ -73,17 +81,21 @@ void allocate_region(page_directory_t * dir, uint32_t start_va, uint32_t end_va,
  * You may notice that we've set the both the PDE and PTE as user-accessible with r/w permissions, because..... we don't care security
  * */
 void allocate_page(page_directory_t * dir, uint32_t virtual_addr, uint32_t frame, int is_kernel, int is_writable) {
+    println("[ALP] Allocating page...");
     page_table_t * table = NULL;
     if(!dir) {
+        println("[ALP] Page directory is empty!");
         // qemu_printf("allocate_page: page directory is empty\n");
         return;
     }
+    println("[ALP] Requesting block from PMM...");
     // Ask pmm for a physical block, and assign the physical block to the virtual address,(left shift 12 bits for storing permission info)
     // This looks so much like the code I wrote for the virtual memory lab I wrote in a system programming class :)
     uint32_t page_dir_idx = PAGEDIR_INDEX(virtual_addr), page_tbl_idx = PAGETBL_INDEX(virtual_addr);
     // If the coressponding page table does not exist, malloc!
     table = dir->ref_tables[page_dir_idx];
     if(!table) {
+        println("[ALP] Allocating table...");
         if(!kheap_enabled)
             table = dumb_kmalloc(sizeof(page_table_t), 1);
         else
@@ -105,6 +117,7 @@ void allocate_page(page_directory_t * dir, uint32_t virtual_addr, uint32_t frame
 
     // If the coressponding page does not exist, allocate_block!
     if(!table->pages[page_tbl_idx].present) {
+        println("[ALP] Allocating page...");
         uint32_t t;
         // Normally, we'll allocate frames from physical memory manager, but sometimes it's useful to be able to set any frame(for example, share memory between process)
         if(frame)
@@ -116,6 +129,8 @@ void allocate_page(page_directory_t * dir, uint32_t virtual_addr, uint32_t frame
         table->pages[page_tbl_idx].rw = 1;
         table->pages[page_tbl_idx].user = 1;
     }
+
+    println("[ALP] Finished!");
 }
 
 /*
@@ -160,6 +175,7 @@ void free_page(page_directory_t * dir, uint32_t virtual_addr, int free) {
  * Remap memory used by the kernel, and enable paging, again
  * */
 void paging_init() {
+    println("Running init...");
     /*
      * Right now, we have a temporary page directory sitting in the kernel's data section
      * I don't like that... Instead, build a new set of paging structures in the memory outside of kernel data/code, by calling our physical memory manager
@@ -168,16 +184,20 @@ void paging_init() {
     // Place paging data after pmm bitmap
     temp_mem = bitmap + bitmap_size;
 
+    println("Allocating page directory...");
     // Allocate a page directory and set it to all zeros(don't need to allocate explicitly because in pmm_init, we already set aside first 4mb for kernel)
     kpage_dir = dumb_kmalloc(sizeof(page_directory_t), 1);
+    println("Setting page directory...");
     memset(kpage_dir, 0, sizeof(page_directory_t));
 
+    println("Preforming inital mapping 1...");
     // Now, map 4mb begining from 0xC0000000 to 0xC0400000(should corresponding to first 1024 physical blocks, so MAKE SURE pmm bitmap is all clear at this point)
     uint32_t i = LOAD_MEMORY_ADDRESS;
     while(i < LOAD_MEMORY_ADDRESS + 4 * M) {
         allocate_page(kpage_dir, i, 0, 1, 1);
         i = i + PAGE_SIZE;
     }
+    println("Preforming inital mappping 2...");
     // Map some memory after 0xc0400000 as kernel heeap ? do it later.
     i = LOAD_MEMORY_ADDRESS + 4 * M;
     while(i < LOAD_MEMORY_ADDRESS + 4 * M + KHEAP_INITIAL_SIZE) {
@@ -185,16 +205,23 @@ void paging_init() {
         i = i + PAGE_SIZE;
     }
 
+    println("Registering interrupt handler...");
     // Register page fault handler, do it later
     register_interrupt_handler(14, page_fault_handler);
 
+    println("Loading kernel directory...");
     // Load kernel directory
     switch_page_directory(kpage_dir, 0);
 
+    println("Requesting paging enable...");
     // Enable Paging (remember to set cr4 to disable 4mb pages too)
     enable_paging();
+
+    println("Allocating first region...");
     // Identity map the first
     allocate_region(kpage_dir, 0x0, 0x10000, 1, 1, 1);
+
+    println("All ready!");
 }
 
 /*
@@ -216,17 +243,25 @@ void switch_page_directory(page_directory_t * page_dir, uint32_t phys) {
  * Then enable PG Bit in cr0
  * */
 void enable_paging() {
+    println("[EP] Enabling paging...");
     uint32_t cr0, cr4;
 
+    println("[EP] AS1-1");
     asm volatile("mov %%cr4, %0" : "=r"(cr4));
+    println("[EP] AS1-2");
     CLEAR_PSEBIT(cr4);
+    println("[EP] AS1-3");
     asm volatile("mov %0, %%cr4" :: "r"(cr4));
 
+    println("[EP] AS2-1");
     asm volatile("mov %%cr0, %0" : "=r"(cr0));
+    println("[EP] AS2-2");
     SET_PGBIT(cr0);
-    asm volatile("mov %0, %%cr0" :: "r"(cr0));
-
+    println("[EP] AS2-3");
+    asm volatile("mov %0, %%cr0" :: "r"(cr0)); // <--- Causing crashes, somehow...
+    println("[EP] Setting global state...");
     paging_enabled = 1;
+    println("[EP] Enabled");
 }
 
 void * ksbrk(int size) {

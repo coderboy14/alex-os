@@ -21,3 +21,10 @@ int strcpy(char *dst,const char *src) {
         i++;
     return i;
 }
+
+int strlen(const char * s) {
+    int len = 0;
+    while(*s++)
+        len++;
+    return len;
+}

@@ -8,6 +8,7 @@
 void* memcpy(void *dest, const void * src, size_t n);
 void* memset(void *dst,char val, int n);
 int strcpy(char *dst,const char *src);
+int strlen(const char * s);
 
 
 #endif

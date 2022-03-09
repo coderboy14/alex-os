@@ -5,7 +5,7 @@ ROOT:=$(realpath $(mkfile_dir))
 BUILD:=$(ROOT)/build
 
 # Define sources and objects
-C_SOURCES := kernel.c ui/vga.c drivers/ata.c drivers/pci.c common/port_io.c common/memutils.c core/kheap.c core/isr.c core/paging.c core/system.c core/pmm.c core/pic.c
+C_SOURCES := kernel.c core/serialio.c ui/vga.c drivers/ata.c drivers/pci.c common/port_io.c common/memutils.c core/kheap.c core/isr.c core/paging.c core/system.c core/pmm.c core/pic.c common/error_catcher.c
 # ASM_SOURCES := 
 NASM_SOURCES := boot.s
 
