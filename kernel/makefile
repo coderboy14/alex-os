@@ -7,7 +7,7 @@ BUILD:=$(ROOT)/build
 # Define sources and objects
 C_SOURCES := kernel.c ui/vga.c drivers/ata.c drivers/pci.c common/port_io.c common/memutils.c core/kheap.c core/isr.c core/paging.c core/system.c core/pmm.c core/pic.c
 # ASM_SOURCES := 
-NASM_SOURCES := boot.s
+NASM_SOURCES := boot.asm
 
 INCLUDE_PATH := include
 OBJECTS=$(C_SOURCES:.c=.o) $(NASM_SOURCES:.asm=.o)
