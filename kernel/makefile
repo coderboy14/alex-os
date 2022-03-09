@@ -10,7 +10,7 @@ C_SOURCES := kernel.c ui/vga.c drivers/ata.c drivers/pci.c common/port_io.c comm
 NASM_SOURCES := boot.s
 
 INCLUDE_PATH := include
-OBJECTS=$(C_SOURCES:.c=.o) $(NASM_SOURCES:.asm=.o)
+OBJECTS=$(C_SOURCES:.c=.o) $(NASM_SOURCES:.s=.o)
 OBJDIRS := $(patsubst %, $(OBJDIR)/%, $(MODULES))
 
 # Define compiler
