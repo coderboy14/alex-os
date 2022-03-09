@@ -18,8 +18,8 @@ CC_PATH=$(HOME)/opt/cross/bin
 ARCH=i686
 
 # Define compiler options
-COMPILE_OPTIONS=-std=gnu99 -ffreestanding -O2 -Wall -Wextra
-LINK_OPTIONS=-ffreestanding -O2 -nostdlib -lgcc
+COMPILE_OPTIONS=-Wall -Wno-int-conversion -fstrength-reduce -fomit-frame-pointer -finline-functions -nostdlib -ffreestanding -std=gnu99 -g -ggdb -c
+LINK_OPTIONS=-ffreestanding -O2 -nostdlib -g -ggdb
 NASM=nasm
 NASMFLAGS=-f elf32 -O0
 
